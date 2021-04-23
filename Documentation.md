@@ -9,10 +9,10 @@ https://shopify.dev/docs/admin-api/access-scopes
 ```
 - Steps
 ```
-https://ackoo-commerce.myshopify.com/admin/oauth/authorize?client_id=28d64daeadc7b0559907f75c7ccdc286&scope=read_script_tags,write_script_tags&redirect_uri=http://localhost/generate_token.php
+https://ackoo-commerce.myshopify.com/admin/oauth/authorize?client_id=28d64daeadc7b0559907f75c7ccdc286&scope=read_script_tags,write_script_tags,read_orders&redirect_uri=http://localhost/generate_token.php
 ```
 ```
-http://localhost/generate_token.php?code=c30112e7838b04d40750058cbe19e807&hmac=6093f118cb5e6429522b06e830fbbedcc572efbd2213cd6fee81319ee2f8bead&host=YWNrb28tY29tbWVyY2UubXlzaG9waWZ5LmNvbS9hZG1pbg&shop=ackoo-commerce.myshopify.com&timestamp=1619145281
+http://localhost/generate_token.php?code=a19d9d0a0fc2e52995d572db0ccdaa1a&hmac=8a85194de32821962bee0e9a17c1c4ea588af1d6053643210f3390466aede52b&host=YWNrb28tY29tbWVyY2UubXlzaG9waWZ5LmNvbS9hZG1pbg&shop=ackoo-commerce.myshopify.com&timestamp=1619175967
 ```
 ```
 POST https://ackoo-commerce.myshopify.com/admin/oauth/access_token
@@ -20,16 +20,17 @@ Request
 {
     "client_id": "28d64daeadc7b0559907f75c7ccdc286",
     "client_secret": "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",
-    "code": "c30112e7838b04d40750058cbe19e807"
+    "code": "a19d9d0a0fc2e52995d572db0ccdaa1a"
 }
 Response
 {
     "access_token": "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",
-    "scope": "write_script_tags"
+    "scope": "write_script_tags,read_orders"
 }
 ```
 
 ## Script tags 
+https://shopify.dev/docs/admin-api/rest/reference/online-store/scripttag#update-2021-04
 
 - Get script tags
 ```
