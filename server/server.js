@@ -6,6 +6,7 @@ import Shopify, { ApiVersion } from "@shopify/shopify-api";
 import Koa from "koa";
 import next from "next";
 import Router from "koa-router";
+import bodyParser from "koa-bodyparser";
 
 dotenv.config();
 const port = parseInt(process.env.PORT, 10) || 8081;
@@ -40,8 +41,9 @@ app.prepare().then(async () => {
         // Access token and shop available in ctx.state.shopify
         const { shop, accessToken, scope } = ctx.state.shopify;
         ACTIVE_SHOPIFY_SHOPS[shop] = scope;
+        console.log("start ", shop, accessToken, scope, ACTIVE_SHOPIFY_SHOPS);
 
-        const response = await Shopify.Webhooks.Registry.register({
+        let response = await Shopify.Webhooks.Registry.register({
           shop,
           accessToken,
           path: "/webhooks",
@@ -49,10 +51,26 @@ app.prepare().then(async () => {
           webhookHandler: async (topic, shop, body) =>
             delete ACTIVE_SHOPIFY_SHOPS[shop],
         });
+        response = await Shopify.Webhooks.Registry.register({
+          shop,
+          accessToken,
+          path: "/webhooks",
+          topic: "CHECKOUTS_CREATE",
+          webhookHandler: async (topic, shop, body) =>
+            delete ACTIVE_SHOPIFY_SHOPS[shop],
+        });
+        response = await Shopify.Webhooks.Registry.register({
+          shop,
+          accessToken,
+          path: "/webhooks",
+          topic: "CHECKOUTS_UPDATE",
+          webhookHandler: async (topic, shop, body) =>
+            delete ACTIVE_SHOPIFY_SHOPS[shop],
+        });
 
         if (!response.success) {
           console.log(
-            `Failed to register APP_UNINSTALLED webhook: ${response.result}`
+            `Failed to register APP_UNINSTALLED, CHECKOUT_CREATE, CHECKOUT_UPDATE webhook: ${response.result}`
           );
         }
 
@@ -79,10 +97,24 @@ app.prepare().then(async () => {
     }
   });
 
-  router.post("/webhooks", async (ctx) => {
+  router.post("/webhooks",async (ctx) => {
+    console.log("webhooks");
     try {
-      await Shopify.Webhooks.Registry.process(ctx.req, ctx.res);
+      // await Shopify.Webhooks.Registry.process(ctx.req, ctx.res);
       console.log(`Webhook processed, returned status code 200`);
+      console.log(ctx.req);
+      console.log(ctx.request.body);
+
+      const webhookId = ctx.req.headers['x-shopify-webhook-id'];
+      const shopHMAC = ctx.req.headers['x-shopify-hmac-sha256'];
+      const topic = ctx.req.headers['x-shopify-topic'];
+      const shopDomain = ctx.req.headers['x-shopify-shop-domain'];
+      const shop = shopDomain.split("\.")[0];
+
+      console.log("shopHMAC: ", shopHMAC);
+      console.log("topic: ", topic);
+      console.log("shopDomain: ", shopDomain);
+      console.log("shop: ", shop);
     } catch (error) {
       console.log(`Failed to process webhook: ${error}`);
     }
@@ -100,6 +132,7 @@ app.prepare().then(async () => {
   router.get("/_next/webpack-hmr", handleRequest); // Webpack content is clear
   router.get("(.*)", verifyRequest(), handleRequest); // Everything else must have sessions
 
+  server.use(bodyParser({}));
   server.use(router.allowedMethods());
   server.use(router.routes());
   server.listen(port, () => {
