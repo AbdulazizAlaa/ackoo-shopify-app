@@ -4,9 +4,12 @@ import "isomorphic-fetch";
 import createShopifyAuth, { verifyRequest } from "@shopify/koa-shopify-auth";
 import Shopify, { ApiVersion } from "@shopify/shopify-api";
 import Koa from "koa";
+import send from "koa-send";
 import next from "next";
 import Router from "koa-router";
 import bodyParser from "koa-bodyparser";
+import { WebhookHandlerFactory } from './webhooks/webhook-handler.factory';
+import axios from "axios";
 
 dotenv.config();
 const port = parseInt(process.env.PORT, 10) || 8081;
@@ -74,6 +77,22 @@ app.prepare().then(async () => {
           );
         }
 
+        const scriptTagReqBody = {
+          "script_tag": {
+            "event": "onload",
+            "src": `${process.env.HOST}/scripttag`
+          }
+        };
+        const scriptTagReqConfig = {
+          headers: {
+            "X-Shopify-Access-Token": accessToken
+          },
+          method: "POST"
+        };
+        const scriptTagRes = await axios.post(`https://${shop}/admin/api/2021-04/script_tags.json`, scriptTagReqBody, scriptTagReqConfig);
+        if(scriptTagRes.status != '201'){
+          console.log("Failed to add script tags to partner store");
+        }
         // Redirect to app with shop parameter upon auth
         ctx.redirect(`/?shop=${shop}`);
       },
@@ -98,23 +117,29 @@ app.prepare().then(async () => {
   });
 
   router.post("/webhooks",async (ctx) => {
-    console.log("webhooks");
     try {
-      // await Shopify.Webhooks.Registry.process(ctx.req, ctx.res);
+      await Shopify.Webhooks.Registry.process(ctx.req, ctx.res);
       console.log(`Webhook processed, returned status code 200`);
-      console.log(ctx.req);
-      console.log(ctx.request.body);
+      // console.log(ctx.req);
+      // console.log(ctx.request.body);
 
       const webhookId = ctx.req.headers['x-shopify-webhook-id'];
       const shopHMAC = ctx.req.headers['x-shopify-hmac-sha256'];
       const topic = ctx.req.headers['x-shopify-topic'];
       const shopDomain = ctx.req.headers['x-shopify-shop-domain'];
       const shop = shopDomain.split("\.")[0];
+      const data = ctx.request.body;
 
       console.log("shopHMAC: ", shopHMAC);
       console.log("topic: ", topic);
       console.log("shopDomain: ", shopDomain);
       console.log("shop: ", shop);
+
+      const handler = WebhookHandlerFactory.make(topic, shop);
+      if(handler === undefined){
+        throw new Error("unspported webhook");
+      }
+      handler.handle(data);
     } catch (error) {
       console.log(`Failed to process webhook: ${error}`);
     }
@@ -127,6 +152,12 @@ app.prepare().then(async () => {
       await Shopify.Utils.graphqlProxy(ctx.req, ctx.res);
     }
   );
+
+  router.get('/scripttag', async (ctx) => {
+    ctx.res.statusCode = 200;
+    ctx.type = 'text/javascript';
+    await send(ctx, '/script-tags/session-token.js');
+  });
 
   router.get("(/_next/static/.*)", handleRequest); // Static content is clear
   router.get("/_next/webpack-hmr", handleRequest); // Webpack content is clear
