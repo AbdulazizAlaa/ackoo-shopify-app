@@ -5,11 +5,13 @@ import createShopifyAuth, { verifyRequest } from "@shopify/koa-shopify-auth";
 import Shopify, { ApiVersion } from "@shopify/shopify-api";
 import Koa from "koa";
 import send from "koa-send";
+import cors from '@koa/cors';
 import next from "next";
 import Router from "koa-router";
 import bodyParser from "koa-bodyparser";
-import { WebhookHandlerFactory } from './webhooks/webhook-handler.factory';
+import { HandlerFactory } from './webhooks/handler.factory';
 import axios from "axios";
+import { CheckoutRepository } from "./repository/checkout.repository";
 
 dotenv.config();
 const port = parseInt(process.env.PORT, 10) || 8081;
@@ -90,7 +92,7 @@ app.prepare().then(async () => {
           method: "POST"
         };
         const scriptTagRes = await axios.post(`https://${shop}/admin/api/2021-04/script_tags.json`, scriptTagReqBody, scriptTagReqConfig);
-        if(scriptTagRes.status != '201'){
+        if (scriptTagRes.status != '201') {
           console.log("Failed to add script tags to partner store");
         }
         // Redirect to app with shop parameter upon auth
@@ -116,9 +118,9 @@ app.prepare().then(async () => {
     }
   });
 
-  router.post("/webhooks",async (ctx) => {
+  router.post("/webhooks", async (ctx) => {
     try {
-      await Shopify.Webhooks.Registry.process(ctx.req, ctx.res);
+      // await Shopify.Webhooks.Registry.process(ctx.request, ctx.res);
       console.log(`Webhook processed, returned status code 200`);
       // console.log(ctx.req);
       // console.log(ctx.request.body);
@@ -135,8 +137,8 @@ app.prepare().then(async () => {
       console.log("shopDomain: ", shopDomain);
       console.log("shop: ", shop);
 
-      const handler = WebhookHandlerFactory.make(topic, shop);
-      if(handler === undefined){
+      const handler = HandlerFactory.make(topic, shop);
+      if (handler === undefined) {
         throw new Error("unspported webhook");
       }
       handler.handle(data);
@@ -159,10 +161,41 @@ app.prepare().then(async () => {
     await send(ctx, '/script-tags/session-token.js');
   });
 
+  router.get("/checkouts/:token?", async (ctx) => {
+    const token = ctx.params['token'];
+    const checkouts = await ((token === undefined) ? CheckoutRepository.getCheckouts() : CheckoutRepository.getCheckout(token)).catch(e => { throw e; });
+
+    ctx.set('content-type', 'application/json');
+    ctx.statusCode = 200;
+    ctx.body = {
+      data: checkouts
+    };
+  });
+
+  router.post("/checkout/confirm", async (ctx) => {
+    console.log("--------------------------------------------------");
+    console.log("checkout - confirm");
+    console.log(ctx.request.body);
+    console.log("--------------------------------------------------");
+
+    const handler = HandlerFactory.make("checkouts/confirm", "");
+    if (handler === undefined) {
+      throw new Error("unspported handler");
+    }
+    handler.handle(ctx.request.body);
+
+    ctx.set('content-type', 'application/json');
+    ctx.statusCode = 200;
+    ctx.body = {
+      message: "successfull"
+    };
+  });
+
   router.get("(/_next/static/.*)", handleRequest); // Static content is clear
   router.get("/_next/webpack-hmr", handleRequest); // Webpack content is clear
   router.get("(.*)", verifyRequest(), handleRequest); // Everything else must have sessions
 
+  server.use(cors());
   server.use(bodyParser({}));
   server.use(router.allowedMethods());
   server.use(router.routes());

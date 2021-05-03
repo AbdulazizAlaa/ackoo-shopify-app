@@ -1,7 +1,8 @@
 export class Checkout {
     constructor(data) {
-        this.name = data['name'];
         this.id = data['id'];
+        this.name = data['name'];
+        this.shop = data['shop'];
         this.token = data['token'];
         this.createdAt = data['created_at'];
         this.updatedAt = data['updated_at'];
