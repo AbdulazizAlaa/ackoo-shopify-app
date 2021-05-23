@@ -1,5 +1,5 @@
 const userAction = async (shop, checkoutToken, sessionToken) => {
-    const host = '54c532f2b037.ngrok.io';
+    const host = '0729987dbf57.ngrok.io';
     const API_URL = `https://${host}/checkout/confirm`;
     const body = {
         shop: shop,

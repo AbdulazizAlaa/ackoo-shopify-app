@@ -12,6 +12,8 @@ import bodyParser from "koa-bodyparser";
 import { HandlerFactory } from './webhooks/handler.factory';
 import axios from "axios";
 import { CheckoutRepository } from "./repository/checkout.repository";
+import { createClient, getOrderUTMSource } from "./handlers/index";
+import { ShopRepository } from "./repository/shop.repository";
 
 dotenv.config();
 const port = parseInt(process.env.PORT, 10) || 8081;
@@ -47,28 +49,48 @@ app.prepare().then(async () => {
         const { shop, accessToken, scope } = ctx.state.shopify;
         ACTIVE_SHOPIFY_SHOPS[shop] = scope;
         console.log("start ", shop, accessToken, scope, ACTIVE_SHOPIFY_SHOPS);
+        
+        await ShopRepository.addShop({name: shop, access_token: accessToken}).catch(e => {throw e;});
 
-        let response = await Shopify.Webhooks.Registry.register({
-          shop,
-          accessToken,
-          path: "/webhooks",
-          topic: "APP_UNINSTALLED",
-          webhookHandler: async (topic, shop, body) =>
-            delete ACTIVE_SHOPIFY_SHOPS[shop],
-        });
+        let response;
+        // TODO remove
+        // let response = await Shopify.Webhooks.Registry.register({
+        //   shop,
+        //   accessToken,
+        //   path: "/webhooks",
+        //   topic: "APP_UNINSTALLED",
+        //   webhookHandler: async (topic, shop, body) =>
+        //     delete ACTIVE_SHOPIFY_SHOPS[shop],
+        // });
+        // response = await Shopify.Webhooks.Registry.register({
+        //   shop,
+        //   accessToken,
+        //   path: "/webhooks",
+        //   topic: "CHECKOUTS_CREATE",
+        //   webhookHandler: async (topic, shop, body) =>
+        //     delete ACTIVE_SHOPIFY_SHOPS[shop],
+        // });
+        // response = await Shopify.Webhooks.Registry.register({
+        //   shop,
+        //   accessToken,
+        //   path: "/webhooks",
+        //   topic: "CHECKOUTS_UPDATE",
+        //   webhookHandler: async (topic, shop, body) =>
+        //     delete ACTIVE_SHOPIFY_SHOPS[shop],
+        // });
+        // response = await Shopify.Webhooks.Registry.register({
+        //   shop,
+        //   accessToken,
+        //   path: "/webhooks",
+        //   topic: "ORDERS_CREATE",
+        //   webhookHandler: async (topic, shop, body) =>
+        //     delete ACTIVE_SHOPIFY_SHOPS[shop],
+        // });
         response = await Shopify.Webhooks.Registry.register({
           shop,
           accessToken,
           path: "/webhooks",
-          topic: "CHECKOUTS_CREATE",
-          webhookHandler: async (topic, shop, body) =>
-            delete ACTIVE_SHOPIFY_SHOPS[shop],
-        });
-        response = await Shopify.Webhooks.Registry.register({
-          shop,
-          accessToken,
-          path: "/webhooks",
-          topic: "CHECKOUTS_UPDATE",
+          topic: "ORDERS_PAID",
           webhookHandler: async (topic, shop, body) =>
             delete ACTIVE_SHOPIFY_SHOPS[shop],
         });
@@ -79,22 +101,23 @@ app.prepare().then(async () => {
           );
         }
 
-        const scriptTagReqBody = {
-          "script_tag": {
-            "event": "onload",
-            "src": `${process.env.HOST}/scripttag`
-          }
-        };
-        const scriptTagReqConfig = {
-          headers: {
-            "X-Shopify-Access-Token": accessToken
-          },
-          method: "POST"
-        };
-        const scriptTagRes = await axios.post(`https://${shop}/admin/api/2021-04/script_tags.json`, scriptTagReqBody, scriptTagReqConfig);
-        if (scriptTagRes.status != '201') {
-          console.log("Failed to add script tags to partner store");
-        }
+        // TODO remove this not needed
+        // const scriptTagReqBody = {
+        //   "script_tag": {
+        //     "event": "onload",
+        //     "src": `${process.env.HOST}/scripttag`
+        //   }
+        // };
+        // const scriptTagReqConfig = {
+        //   headers: {
+        //     "X-Shopify-Access-Token": accessToken
+        //   },
+        //   method: "POST"
+        // };
+        // const scriptTagRes = await axios.post(`https://${shop}/admin/api/2021-04/script_tags.json`, scriptTagReqBody, scriptTagReqConfig);
+        // if (scriptTagRes.status != '201') {
+        //   console.log("Failed to add script tags to partner store");
+        // }
         // Redirect to app with shop parameter upon auth
         ctx.redirect(`/?shop=${shop}`);
       },
@@ -123,7 +146,7 @@ app.prepare().then(async () => {
       // await Shopify.Webhooks.Registry.process(ctx.request, ctx.res);
       console.log(`Webhook processed, returned status code 200`);
       // console.log(ctx.req);
-      // console.log(ctx.request.body);
+      // console.log("body", ctx.request.body);
 
       const webhookId = ctx.req.headers['x-shopify-webhook-id'];
       const shopHMAC = ctx.req.headers['x-shopify-hmac-sha256'];
@@ -137,11 +160,13 @@ app.prepare().then(async () => {
       console.log("shopDomain: ", shopDomain);
       console.log("shop: ", shop);
 
+      const shopData = await ShopRepository.getShop(shopDomain).catch(e => {throw e;});
+
       const handler = HandlerFactory.make(topic, shop);
       if (handler === undefined) {
         throw new Error("unspported webhook");
       }
-      handler.handle(data);
+      handler.handle(ctx, data, shopData);
     } catch (error) {
       console.log(`Failed to process webhook: ${error}`);
     }
@@ -155,11 +180,12 @@ app.prepare().then(async () => {
     }
   );
 
-  router.get('/scripttag', async (ctx) => {
-    ctx.res.statusCode = 200;
-    ctx.type = 'text/javascript';
-    await send(ctx, '/script-tags/session-token.js');
-  });
+  // // TODO remove
+  // router.get('/scripttag', async (ctx) => {
+  //   ctx.res.statusCode = 200;
+  //   ctx.type = 'text/javascript';
+  //   await send(ctx, '/script-tags/session-token.js');
+  // });
 
   router.get("/checkouts/:token?", async (ctx) => {
     const token = ctx.params['token'];
@@ -172,6 +198,7 @@ app.prepare().then(async () => {
     };
   });
 
+  // TODO remove 
   router.post("/checkout/confirm", async (ctx) => {
     console.log("--------------------------------------------------");
     console.log("checkout - confirm");
