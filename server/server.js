@@ -218,6 +218,23 @@ app.prepare().then(async () => {
     };
   });
 
+  router.get("/order", async (ctx) => {
+
+    const apolloClient = createClient("ackoo-commerce.myshopify.com", "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");
+    Object.assign(ctx, { client: apolloClient, order_id: 3794330779820 });
+    const sessionToken = await getOrderUTMSource(ctx).catch(e => {console.log(e); throw e;});
+    console.log("sessionToken", sessionToken);
+    // const sessionToken = getOrderUTMSource(ctx).then(sessionToken => {
+    //     console.log("sessionToken", sessionToken);
+    // }).catch(e => { console.log(e); throw e; });
+    
+    ctx.set('content-type', 'application/json');
+    ctx.statusCode = 200;
+    ctx.body = {
+      message: "successfull"
+    };
+  });
+
   router.get("(/_next/static/.*)", handleRequest); // Static content is clear
   router.get("/_next/webpack-hmr", handleRequest); // Webpack content is clear
   router.get("(.*)", verifyRequest(), handleRequest); // Everything else must have sessions
