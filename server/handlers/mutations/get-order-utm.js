@@ -30,7 +30,6 @@ export const getOrderUTMSource = async (ctx) => {
     .then(response => {
       console.log(response.data.order);
       console.log(response.data.order.customerJourney);
-      // console.log(response.data.order.customerJourney.moments);
       const utmParams = response.data.order.customerJourney? response.data.order.customerJourney.moments.find(item => item['utmParameters'] != null) : null;
       return utmParams ? utmParams['utmParameters']['source'] : null;
     });

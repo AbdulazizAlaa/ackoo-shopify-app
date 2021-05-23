@@ -52,41 +52,7 @@ app.prepare().then(async () => {
         
         await ShopRepository.addShop({name: shop, access_token: accessToken}).catch(e => {throw e;});
 
-        let response;
-        // TODO remove
-        // let response = await Shopify.Webhooks.Registry.register({
-        //   shop,
-        //   accessToken,
-        //   path: "/webhooks",
-        //   topic: "APP_UNINSTALLED",
-        //   webhookHandler: async (topic, shop, body) =>
-        //     delete ACTIVE_SHOPIFY_SHOPS[shop],
-        // });
-        // response = await Shopify.Webhooks.Registry.register({
-        //   shop,
-        //   accessToken,
-        //   path: "/webhooks",
-        //   topic: "CHECKOUTS_CREATE",
-        //   webhookHandler: async (topic, shop, body) =>
-        //     delete ACTIVE_SHOPIFY_SHOPS[shop],
-        // });
-        // response = await Shopify.Webhooks.Registry.register({
-        //   shop,
-        //   accessToken,
-        //   path: "/webhooks",
-        //   topic: "CHECKOUTS_UPDATE",
-        //   webhookHandler: async (topic, shop, body) =>
-        //     delete ACTIVE_SHOPIFY_SHOPS[shop],
-        // });
-        // response = await Shopify.Webhooks.Registry.register({
-        //   shop,
-        //   accessToken,
-        //   path: "/webhooks",
-        //   topic: "ORDERS_CREATE",
-        //   webhookHandler: async (topic, shop, body) =>
-        //     delete ACTIVE_SHOPIFY_SHOPS[shop],
-        // });
-        response = await Shopify.Webhooks.Registry.register({
+        const response = await Shopify.Webhooks.Registry.register({
           shop,
           accessToken,
           path: "/webhooks",
@@ -100,24 +66,6 @@ app.prepare().then(async () => {
             `Failed to register APP_UNINSTALLED, CHECKOUT_CREATE, CHECKOUT_UPDATE webhook: ${response.result}`
           );
         }
-
-        // TODO remove this not needed
-        // const scriptTagReqBody = {
-        //   "script_tag": {
-        //     "event": "onload",
-        //     "src": `${process.env.HOST}/scripttag`
-        //   }
-        // };
-        // const scriptTagReqConfig = {
-        //   headers: {
-        //     "X-Shopify-Access-Token": accessToken
-        //   },
-        //   method: "POST"
-        // };
-        // const scriptTagRes = await axios.post(`https://${shop}/admin/api/2021-04/script_tags.json`, scriptTagReqBody, scriptTagReqConfig);
-        // if (scriptTagRes.status != '201') {
-        //   console.log("Failed to add script tags to partner store");
-        // }
         // Redirect to app with shop parameter upon auth
         ctx.redirect(`/?shop=${shop}`);
       },
@@ -180,13 +128,6 @@ app.prepare().then(async () => {
     }
   );
 
-  // // TODO remove
-  // router.get('/scripttag', async (ctx) => {
-  //   ctx.res.statusCode = 200;
-  //   ctx.type = 'text/javascript';
-  //   await send(ctx, '/script-tags/session-token.js');
-  // });
-
   router.get("/checkouts/:token?", async (ctx) => {
     const token = ctx.params['token'];
     const checkouts = await ((token === undefined) ? CheckoutRepository.getCheckouts() : CheckoutRepository.getCheckout(token)).catch(e => { throw e; });
@@ -195,43 +136,6 @@ app.prepare().then(async () => {
     ctx.statusCode = 200;
     ctx.body = {
       data: checkouts
-    };
-  });
-
-  // TODO remove 
-  router.post("/checkout/confirm", async (ctx) => {
-    console.log("--------------------------------------------------");
-    console.log("checkout - confirm");
-    console.log(ctx.request.body);
-    console.log("--------------------------------------------------");
-
-    const handler = HandlerFactory.make("checkouts/confirm", "");
-    if (handler === undefined) {
-      throw new Error("unspported handler");
-    }
-    handler.handle(ctx.request.body);
-
-    ctx.set('content-type', 'application/json');
-    ctx.statusCode = 200;
-    ctx.body = {
-      message: "successfull"
-    };
-  });
-
-  router.get("/order", async (ctx) => {
-
-    const apolloClient = createClient("ackoo-commerce.myshopify.com", "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");
-    Object.assign(ctx, { client: apolloClient, order_id: 3794330779820 });
-    const sessionToken = await getOrderUTMSource(ctx).catch(e => {console.log(e); throw e;});
-    console.log("sessionToken", sessionToken);
-    // const sessionToken = getOrderUTMSource(ctx).then(sessionToken => {
-    //     console.log("sessionToken", sessionToken);
-    // }).catch(e => { console.log(e); throw e; });
-    
-    ctx.set('content-type', 'application/json');
-    ctx.statusCode = 200;
-    ctx.body = {
-      message: "successfull"
     };
   });
 
