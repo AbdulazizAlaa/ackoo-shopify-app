@@ -4,15 +4,12 @@ import "isomorphic-fetch";
 import createShopifyAuth, { verifyRequest } from "@shopify/koa-shopify-auth";
 import Shopify, { ApiVersion } from "@shopify/shopify-api";
 import Koa from "koa";
-import send from "koa-send";
-import cors from '@koa/cors';
+import cors from "@koa/cors";
 import next from "next";
 import Router from "koa-router";
 import bodyParser from "koa-bodyparser";
-import { HandlerFactory } from './webhooks/handler.factory';
-import axios from "axios";
+import { HandlerFactory } from "./webhooks/handler.factory";
 import { CheckoutRepository } from "./repository/checkout.repository";
-import { createClient, getOrderUTMSource } from "./handlers/index";
 import { ShopRepository } from "./repository/shop.repository";
 
 dotenv.config();
@@ -49,8 +46,13 @@ app.prepare().then(async () => {
         const { shop, accessToken, scope } = ctx.state.shopify;
         ACTIVE_SHOPIFY_SHOPS[shop] = scope;
         console.log("start ", shop, accessToken, scope, ACTIVE_SHOPIFY_SHOPS);
-        
-        await ShopRepository.addShop({name: shop, access_token: accessToken}).catch(e => {throw e;});
+
+        await ShopRepository.addShop({
+          name: shop,
+          access_token: accessToken,
+        }).catch((e) => {
+          throw e;
+        });
 
         const response = await Shopify.Webhooks.Registry.register({
           shop,
@@ -96,11 +98,11 @@ app.prepare().then(async () => {
       // console.log(ctx.req);
       // console.log("body", ctx.request.body);
 
-      const webhookId = ctx.req.headers['x-shopify-webhook-id'];
-      const shopHMAC = ctx.req.headers['x-shopify-hmac-sha256'];
-      const topic = ctx.req.headers['x-shopify-topic'];
-      const shopDomain = ctx.req.headers['x-shopify-shop-domain'];
-      const shop = shopDomain.split("\.")[0];
+      const webhookId = ctx.req.headers["x-shopify-webhook-id"];
+      const shopHMAC = ctx.req.headers["x-shopify-hmac-sha256"];
+      const topic = ctx.req.headers["x-shopify-topic"];
+      const shopDomain = ctx.req.headers["x-shopify-shop-domain"];
+      const shop = shopDomain.split(".")[0];
       const data = ctx.request.body;
 
       console.log("shopHMAC: ", shopHMAC);
@@ -108,7 +110,9 @@ app.prepare().then(async () => {
       console.log("shopDomain: ", shopDomain);
       console.log("shop: ", shop);
 
-      const shopData = await ShopRepository.getShop(shopDomain).catch(e => {throw e;});
+      const shopData = await ShopRepository.getShop(shopDomain).catch((e) => {
+        throw e;
+      });
 
       const handler = HandlerFactory.make(topic, shop);
       if (handler === undefined) {
@@ -129,13 +133,29 @@ app.prepare().then(async () => {
   );
 
   router.get("/checkouts/:token?", async (ctx) => {
-    const token = ctx.params['token'];
-    const checkouts = await ((token === undefined) ? CheckoutRepository.getCheckouts() : CheckoutRepository.getCheckout(token)).catch(e => { throw e; });
+    const token = ctx.params["token"];
+    const checkouts = await (token === undefined
+      ? CheckoutRepository.getCheckouts()
+      : CheckoutRepository.getCheckout(token)
+    ).catch((e) => {
+      throw e;
+    });
 
-    ctx.set('content-type', 'application/json');
+    ctx.set("content-type", "application/json");
     ctx.statusCode = 200;
     ctx.body = {
-      data: checkouts
+      data: checkouts,
+    };
+  });
+
+  router.post("/shop/keys", async (ctx) => {
+    console.log(ctx.request.header.referer);
+    console.log(ctx.request.body);
+
+    ctx.set("content-type", "application/json");
+    ctx.statusCode = 200;
+    ctx.body = {
+      data: "successfull",
     };
   });
 
