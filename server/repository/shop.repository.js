@@ -7,6 +7,10 @@ export class ShopRepository {
     return _shopsDB;
   }
 
+  static get collectionName() {
+    return "ackoo-shops";
+  }
+
   static async addShop(shop) {
     let storedShop = await ShopRepository.getShop(shop.name).catch((e) => {
       console.log(e);
@@ -20,14 +24,11 @@ export class ShopRepository {
     storedShop.api_key = shop.api_key || storedShop.api_key;
     storedShop.api_secret = shop.api_secret || storedShop.api_secret;
 
-    const db = await Database.connect(process.env.DB_CONNECTION_URL).catch(
-      (e) => {
-        throw e;
-      }
-    );
-    console.log(db);
+    const db = await Database.getInstance().catch((e) => {
+      throw e;
+    });
     await db
-      .collection("ackoo-shops")
+      .collection(ShopRepository.collectionName)
       .insertOne(storedShop)
       .catch((e) => {
         throw e;
@@ -39,15 +40,14 @@ export class ShopRepository {
     });
   }
   static async getShop(name) {
-    const db = await Database.connect(process.env.DB_CONNECTION_URL).catch(
-      (e) => {
-        throw e;
-      }
-    );
+    const db = await Database.getInstance().catch((e) => {
+      throw e;
+    });
     const shop = await db
-      .collection("ackoo-shops")
-      .findOne({ name: storedShop.name })
+      .collection(ShopRepository.collectionName)
+      .findOne({ name: name })
       .catch((e) => {
+        console.log("sssss", e);
         throw e;
       });
     return shop;
