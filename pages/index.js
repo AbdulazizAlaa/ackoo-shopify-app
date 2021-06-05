@@ -8,24 +8,24 @@ import {
   TextField,
 } from "@shopify/polaris";
 
-const Index = (context) => {
-  const [accessKey, setAccessKey] = useState("");
+const Index = () => {
+  const BASE_URL = "https://f453b08b53eb.ngrok.io";
+  const [apiSecret, setApiSecret] = useState("");
   const [apiKey, setApiKey] = useState("");
 
   const handleApiKeyChange = useCallback((value) => setApiKey(value), []);
-  const handleAccessKeyChange = useCallback((value) => setAccessKey(value), []);
+  const handleApiSecretChange = useCallback((value) => setApiSecret(value), []);
 
   const handleSave = async () => {
     console.log("hiiii");
-    console.log(accessKey, apiKey);
+    console.log(apiSecret, apiKey);
 
     const headers = {
-      "x-shopify-shop-domain": "",
       Accept: "application/json",
       "Content-Type": "application/json",
     };
-    const body = JSON.stringify({ access_key: accessKey, api_key: apiKey });
-    const res = await fetch("https://a892c244c631.ngrok.io/shop/keys", {
+    const body = JSON.stringify({ api_secret: apiSecret, api_key: apiKey });
+    const res = await fetch(`${BASE_URL}/shop/keys`, {
       method: "POST",
       headers: headers,
       body: body,
@@ -35,9 +35,17 @@ const Index = (context) => {
   };
 
   const handleDelete = () => {
-    setAccessKey("");
+    setApiSecret("");
     setApiKey("");
   };
+
+  // const headers = {
+  //   "Accept": "application/json",
+  //   "Content-Type": "application/json",
+  // };
+  // const res = await fetch(`${BASE_URL}/shop/keys`, {method: "GET", headers: headers});
+  // const result = await res.json();
+  // console.log(result);
 
   return (
     <Page
@@ -49,8 +57,8 @@ const Index = (context) => {
         <Form>
           <FormLayout>
             <TextField
-              value={accessKey}
-              onChange={handleAccessKeyChange}
+              value={apiSecret}
+              onChange={handleApiSecretChange}
               label="Access Key"
               type="Access Key"
             />

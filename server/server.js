@@ -9,8 +9,8 @@ import next from "next";
 import Router from "koa-router";
 import bodyParser from "koa-bodyparser";
 import { HandlerFactory } from "./webhooks/handler.factory";
-import { CheckoutRepository } from "./repository/checkout.repository";
 import { ShopRepository } from "./repository/shop.repository";
+import { Middleware } from "./helpers/middleware";
 
 dotenv.config();
 const port = parseInt(process.env.PORT, 10) || 8081;
@@ -132,32 +132,51 @@ app.prepare().then(async () => {
     }
   );
 
-  router.get("/checkouts/:token?", async (ctx) => {
-    const token = ctx.params["token"];
-    const checkouts = await (token === undefined
-      ? CheckoutRepository.getCheckouts()
-      : CheckoutRepository.getCheckout(token)
-    ).catch((e) => {
-      throw e;
-    });
+  router.post(
+    "/shop/keys",
+    Middleware.setOrigin,
+    Middleware.verifyRequest,
+    async (ctx) => {
+      console.log(ctx.request.body);
+      const body = ctx.request.body;
+      const shop = ctx.req.headers["x-shopify-shop-domain"];
+      ///
+      const updatedShop = await ShopRepository.addShop({
+        name: shop,
+        api_key: body.api_key,
+        api_secret: body.api_secret,
+      }).catch((e) => {
+        throw e;
+      });
 
-    ctx.set("content-type", "application/json");
-    ctx.statusCode = 200;
-    ctx.body = {
-      data: checkouts,
-    };
-  });
+      ctx.set("content-type", "application/json");
+      ctx.statusCode = 200;
+      ctx.body = {
+        message: "successful",
+        data: updatedShop,
+      };
+    }
+  );
 
-  router.post("/shop/keys", async (ctx) => {
-    console.log(ctx.request.header.referer);
-    console.log(ctx.request.body);
+  router.get(
+    "/shop/keys",
+    Middleware.setOrigin,
+    Middleware.verifyRequest,
+    async (ctx) => {
+      const shop = ctx.req.headers["x-shopify-shop-domain"];
+      ///
+      const shopData = await ShopRepository.getShop(shop).catch((e) => {
+        throw e;
+      });
 
-    ctx.set("content-type", "application/json");
-    ctx.statusCode = 200;
-    ctx.body = {
-      data: "successfull",
-    };
-  });
+      ctx.set("content-type", "application/json");
+      ctx.statusCode = 200;
+      ctx.body = {
+        message: "successful",
+        data: shopData,
+      };
+    }
+  );
 
   router.get("(/_next/static/.*)", handleRequest); // Static content is clear
   router.get("/_next/webpack-hmr", handleRequest); // Webpack content is clear
