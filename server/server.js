@@ -7,7 +7,7 @@ import Koa from "koa";
 import cors from "@koa/cors";
 import next from "next";
 import Router from "koa-router";
-import bodyParser from "koa-bodyparser";
+import koaBody from "koa-body";
 import { HandlerFactory } from "./webhooks/handler.factory";
 import { ShopRepository } from "./repository/shop.repository";
 import { Middleware } from "./helpers/middleware";
@@ -137,14 +137,15 @@ app.prepare().then(async () => {
     Middleware.setOrigin,
     Middleware.verifyRequest,
     async (ctx) => {
-      console.log(ctx.request.body);
       const body = ctx.request.body;
       const shop = ctx.req.headers["x-shopify-shop-domain"];
-      ///
-      const updatedShop = await ShopRepository.addShop({
+      console.log("body", body);
+      console.log("shop", shop);
+
+      let updatedShop = await ShopRepository.addShop({
         name: shop,
-        api_key: body.api_key,
-        api_secret: body.api_secret,
+        app_key: body.app_key,
+        app_secret: body.app_secret,
       }).catch((e) => {
         throw e;
       });
@@ -164,7 +165,6 @@ app.prepare().then(async () => {
     Middleware.verifyRequest,
     async (ctx) => {
       const shop = ctx.req.headers["x-shopify-shop-domain"];
-      ///
       const shopData = await ShopRepository.getShop(shop).catch((e) => {
         throw e;
       });
@@ -183,7 +183,7 @@ app.prepare().then(async () => {
   router.get("(.*)", verifyRequest(), handleRequest); // Everything else must have sessions
 
   server.use(cors());
-  server.use(bodyParser({}));
+  server.use(koaBody());
   server.use(router.allowedMethods());
   server.use(router.routes());
   server.listen(port, () => {

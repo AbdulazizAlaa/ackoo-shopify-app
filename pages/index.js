@@ -9,34 +9,35 @@ import {
 } from "@shopify/polaris";
 
 const Index = () => {
-  const BASE_URL = "https://f453b08b53eb.ngrok.io";
-  const [apiSecret, setApiSecret] = useState("");
-  const [apiKey, setApiKey] = useState("");
+  const BASE_URL = "https://74a26350a7c6.ngrok.io";
+  const [appSecret, setAppSecret] = useState("");
+  const [appKey, setAppKey] = useState("");
 
-  const handleApiKeyChange = useCallback((value) => setApiKey(value), []);
-  const handleApiSecretChange = useCallback((value) => setApiSecret(value), []);
+  const handleAppKeyChange = useCallback((value) => setAppKey(value), []);
+  const handleAppSecretChange = useCallback((value) => setAppSecret(value), []);
 
   const handleSave = async () => {
-    console.log("hiiii");
-    console.log(apiSecret, apiKey);
-
     const headers = {
       Accept: "application/json",
       "Content-Type": "application/json",
     };
-    const body = JSON.stringify({ api_secret: apiSecret, api_key: apiKey });
+    const body = JSON.stringify({ app_secret: appSecret, app_key: appKey });
+    console.log(body);
     const res = await fetch(`${BASE_URL}/shop/keys`, {
       method: "POST",
       headers: headers,
       body: body,
     });
-    const result = await res.json();
-    console.log(result);
+    console.log(res);
+    if (res.status === 200) {
+      const result = await res.json();
+      console.log("result", result);
+    }
   };
 
   const handleDelete = () => {
-    setApiSecret("");
-    setApiKey("");
+    setAppSecret("");
+    setAppKey("");
   };
 
   // const headers = {
@@ -57,17 +58,17 @@ const Index = () => {
         <Form>
           <FormLayout>
             <TextField
-              value={apiSecret}
-              onChange={handleApiSecretChange}
-              label="Access Key"
-              type="Access Key"
+              value={appSecret}
+              onChange={handleAppSecretChange}
+              label="App Secret"
+              type="App Secret"
             />
 
             <TextField
-              value={apiKey}
-              onChange={handleApiKeyChange}
-              label="API Key"
-              type="API Key"
+              value={appKey}
+              onChange={handleAppKeyChange}
+              label="App Key"
+              type="App Key"
             />
           </FormLayout>
         </Form>

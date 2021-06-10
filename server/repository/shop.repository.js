@@ -13,44 +13,49 @@ export class ShopRepository {
 
   static async addShop(shop) {
     let storedShop = await ShopRepository.getShop(shop.name).catch((e) => {
-      console.log(e);
       throw e;
     });
-    if (storedShop === undefined) {
+    if (storedShop === undefined || storedShop === null) {
       storedShop = new ShopDAO({});
     }
     storedShop.name = shop.name;
-    storedShop.access_token = shop.access_token || storedShop.access_token;
-    storedShop.api_key = shop.api_key || storedShop.api_key;
-    storedShop.api_secret = shop.api_secret || storedShop.api_secret;
+    storedShop.access_token =
+      shop.access_token == undefined
+        ? storedShop.access_token
+        : shop.access_token;
+    storedShop.app_key =
+      shop.app_key == undefined ? storedShop.app_key : shop.app_key;
+    storedShop.app_secret =
+      shop.app_secret == undefined ? storedShop.app_secret : shop.app_secret;
 
+    console.log(storedShop);
     const db = await Database.getInstance().catch((e) => {
       throw e;
     });
     await db
       .collection(ShopRepository.collectionName)
-      .insertOne(storedShop)
+      .update({ _id: storedShop._id }, storedShop, { upsert: true })
       .catch((e) => {
+        console.log(e);
         throw e;
       });
-    // ShopRepository.shopsDB[shop.name] = storedShop;
 
-    return await ShopRepository.getShop(shop.name).catch((e) => {
+    storedShop = await ShopRepository.getShop(shop.name).catch((e) => {
       throw e;
     });
+
+    return storedShop;
   }
+
   static async getShop(name) {
     const db = await Database.getInstance().catch((e) => {
       throw e;
     });
-    const shop = await db
+    return await db
       .collection(ShopRepository.collectionName)
       .findOne({ name: name })
       .catch((e) => {
-        console.log("sssss", e);
         throw e;
       });
-    return shop;
-    // return ShopRepository.shopsDB[name];
   }
 }
